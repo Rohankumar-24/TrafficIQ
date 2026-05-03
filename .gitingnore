@@ -1,0 +1,16 @@
+node_modules/
+client/node_modules/
+
+__pycache__/
+*.pyc
+
+.env
+
+videos/
+data/
+
+models/*.pt
+models/*.pkl
+
+dist/
+build/
