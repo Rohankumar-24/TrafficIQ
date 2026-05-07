@@ -17,6 +17,8 @@ CORS(app, origins="*")
 # ── Load models ───────────────────────────────────────────
 print("Loading models...")
 yolo    = YOLO("models/best.pt")
+# yolo    = YOLO("best.pt")
+# yolo    = YOLO("models/best2.pt")
 clf     = joblib.load("models/classifier.pkl")
 reg     = joblib.load("models/regressor.pkl")
 le_lane = joblib.load("models/le_lane.pkl")
