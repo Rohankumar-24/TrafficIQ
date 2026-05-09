@@ -11,7 +11,9 @@ const Analytics = () => {
 
     const data = analyticsData;
 
-    // ── Congestion Distribution from Flask /analytics ──────────────────
+    // ── Flask analytics state (timeline) — used by bar chart ──────────────────
+    const [analyticsFlask, setAnalyticsFlask] = useState({ timeline: [] });
+    // ── Congestion Distribution from Flask /analytics ─────────────────────────
     const [congDist, setCongDist] = useState({ Low: 0, Medium: 0, High: 0 });
 
     useEffect(() => {
@@ -21,6 +23,7 @@ const Analytics = () => {
                 if (res.data?.congestion_dist) {
                     setCongDist(prev => ({ ...prev, ...res.data.congestion_dist }));
                 }
+                if (res.data) setAnalyticsFlask(res.data);
             } catch (err) {
                 // Flask may not be running; silently ignore
             }
@@ -33,6 +36,11 @@ const Analytics = () => {
 
     // Congestion distribution levels
     const total = (congDist.Low || 0) + (congDist.Medium || 0) + (congDist.High || 0);
+
+    const hasData = (
+        (analyticsFlask?.timeline?.length > 0) &&
+        (total > 0)
+    );
 
     const levels = [
         {
@@ -127,118 +135,234 @@ const Analytics = () => {
                         </p>
                     </div>
 
-                    {/* 3 Progress Cards */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {levels.map((level) => {
-                            const pct = total > 0
-                                ? Math.round((level.value / total) * 100)
-                                : 0;
+                    {/* 3 Progress Cards or Empty State */}
+                    {hasData ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            {levels.map((level) => {
+                                const pct = total > 0
+                                    ? Math.round((level.value / total) * 100)
+                                    : 0;
 
-                            return (
-                                <div
-                                    key={level.key}
-                                    style={{
-                                        background:   level.bgColor,
-                                        border:       `1px solid ${level.border}`,
-                                        borderRadius: '10px',
-                                        padding:      '16px 20px'
-                                    }}
-                                >
-                                    {/* Top row */}
-                                    <div style={{
-                                        display:        'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems:     'center',
-                                        marginBottom:   '10px'
-                                    }}>
-                                        {/* Left — icon + label */}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                            <span style={{ fontSize: '18px' }}>{level.icon}</span>
+                                return (
+                                    <div
+                                        key={level.key}
+                                        style={{
+                                            background:   level.bgColor,
+                                            border:       `1px solid ${level.border}`,
+                                            borderRadius: '10px',
+                                            padding:      '16px 20px'
+                                        }}
+                                    >
+                                        {/* Top row */}
+                                        <div style={{
+                                            display:        'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems:     'center',
+                                            marginBottom:   '10px'
+                                        }}>
+                                            {/* Left — icon + label */}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                <span style={{ fontSize: '18px' }}>{level.icon}</span>
+                                                <span style={{
+                                                    fontSize:      '13px',
+                                                    fontWeight:    700,
+                                                    color:         level.color,
+                                                    letterSpacing: '0.5px'
+                                                }}>
+                                                    {level.label}
+                                                </span>
+                                            </div>
+
+                                            {/* Right — percentage badge */}
                                             <span style={{
-                                                fontSize:      '13px',
-                                                fontWeight:    700,
-                                                color:         level.color,
-                                                letterSpacing: '0.5px'
+                                                fontFamily: 'JetBrains Mono, monospace',
+                                                fontSize:   '20px',
+                                                fontWeight: 700,
+                                                color:      level.color
                                             }}>
-                                                {level.label}
+                                                {pct}%
                                             </span>
                                         </div>
 
-                                        {/* Right — percentage badge */}
-                                        <span style={{
-                                            fontFamily: 'JetBrains Mono, monospace',
-                                            fontSize:   '20px',
-                                            fontWeight: 700,
-                                            color:      level.color
-                                        }}>
-                                            {pct}%
-                                        </span>
-                                    </div>
-
-                                    {/* Progress bar */}
-                                    <div style={{
-                                        background:   'rgba(255,255,255,0.05)',
-                                        borderRadius: '4px',
-                                        height:       '8px',
-                                        overflow:     'hidden',
-                                        marginBottom: '8px'
-                                    }}>
+                                        {/* Progress bar */}
                                         <div style={{
-                                            width:        `${pct}%`,
-                                            height:       '100%',
-                                            background:   level.color,
+                                            background:   'rgba(255,255,255,0.05)',
                                             borderRadius: '4px',
-                                            transition:   'width 0.6s ease',
-                                            boxShadow:    `0 0 8px ${level.color}60`
-                                        }} />
-                                    </div>
+                                            height:       '8px',
+                                            overflow:     'hidden',
+                                            marginBottom: '8px'
+                                        }}>
+                                            <div style={{
+                                                width:        `${pct}%`,
+                                                height:       '100%',
+                                                background:   level.color,
+                                                borderRadius: '4px',
+                                                transition:   'width 0.6s ease',
+                                                boxShadow:    `0 0 8px ${level.color}60`
+                                            }} />
+                                        </div>
 
-                                    {/* Bottom — reading count */}
-                                    <div style={{ fontSize: '12px', color: '#475569' }}>
-                                        {level.value} {level.value === 1 ? 'reading' : 'readings'} recorded
+                                        {/* Bottom — reading count */}
+                                        <div style={{ fontSize: '12px', color: '#475569' }}>
+                                            {level.value} {level.value === 1 ? 'reading' : 'readings'} recorded
+                                        </div>
                                     </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    {/* Empty state */}
-                    {total === 0 && (
+                                );
+                            })}
+                        </div>
+                    ) : (
                         <div style={{
-                            textAlign: 'center',
-                            padding:   '40px 20px',
-                            color:     '#334155'
+                            display:        'flex',
+                            flexDirection:  'column',
+                            alignItems:     'center',
+                            justifyContent: 'center',
+                            minHeight:      '280px',
+                            color:          '#334155'
                         }}>
-                            <div style={{ fontSize: '40px', marginBottom: '12px' }}>📊</div>
-                            <p style={{ margin: 0, fontSize: '15px' }}>No data yet</p>
+                            <div style={{ fontSize:'48px', marginBottom:'14px' }}>📊</div>
                             <p style={{
-                                margin:   '6px 0 0',
-                                fontSize: '12px',
-                                color:    '#1e293b'
+                                margin:     0,
+                                fontSize:   '16px',
+                                color:      '#475569',
+                                fontWeight: 600
                             }}>
-                                Start detection to see congestion distribution
+                                No congestion data yet
                             </p>
+                            <p style={{
+                                margin:    '8px 0 0',
+                                fontSize:  '13px',
+                                color:     '#334155',
+                                textAlign: 'center'
+                            }}>
+                                Start the detection system on the Dashboard<br/>
+                                to begin recording congestion data
+                            </p>
+                            <div style={{
+                                marginTop:    '20px',
+                                background:   'rgba(0,229,255,0.05)',
+                                border:       '1px solid rgba(0,229,255,0.15)',
+                                borderRadius: '10px',
+                                padding:      '10px 20px',
+                                fontSize:     '13px',
+                                color:        '#00e5ff'
+                            }}>
+                                Go to Dashboard → Upload videos → Start System
+                            </div>
                         </div>
                     )}
                 </div>
 
-                {/* Bar Chart - Total Vehicles Comparison */}
-                <div className="glass-panel p-6 rounded-2xl border border-white/5">
-                    <h2 className="text-xl font-bold text-white mb-6">Recent Lane Comparison</h2>
-                    <div className="h-64 w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={(data.timeSeriesData || []).slice(-5)}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                                <XAxis dataKey="time" stroke="#9ca3af" />
-                                <YAxis stroke="#9ca3af" />
-                                <Tooltip contentStyle={{ backgroundColor: '#0a0e1a', borderColor: '#333' }} />
-                                <Legend />
-                                <Bar dataKey="lane1" fill="#00e5ff" radius={[4, 4, 0, 0]} name="Lane 1" />
-                                <Bar dataKey="lane2" fill="#00ff88" radius={[4, 4, 0, 0]} name="Lane 2" />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
+                {/* Bar Chart — Recent Lane Comparison (from Flask timeline) */}
+                {(() => {
+                    const recentData = hasData
+                        ? (analyticsFlask.timeline || [])
+                            .slice(-10)
+                            .map(item => ({
+                                time:  item.timestamp,
+                                Lane1: item.lane1_count || 0,
+                                Lane2: item.lane2_count || 0
+                            }))
+                        : [];
+
+                    const CustomTooltip = ({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                            return (
+                                <div style={{
+                                    background:   '#1a2535',
+                                    border:       '1px solid #334155',
+                                    borderRadius: '8px',
+                                    padding:      '10px 14px',
+                                    fontSize:     '13px'
+                                }}>
+                                    <p style={{ color: '#94a3b8', margin: '0 0 6px' }}>{label}</p>
+                                    {payload.map((p, i) => (
+                                        <p key={i} style={{ color: p.color, margin: '2px 0', fontWeight: 600 }}>
+                                            {p.name}: {p.value} vehicles
+                                        </p>
+                                    ))}
+                                </div>
+                            );
+                        }
+                        return null;
+                    };
+
+                    return (
+                        <div style={{
+                            background:   '#0f1623',
+                            border:       '1px solid #1a2535',
+                            borderRadius: '14px',
+                            padding:      '20px'
+                        }}>
+                            <h3 style={{
+                                fontFamily: 'Rajdhani, sans-serif',
+                                fontSize:   '18px',
+                                fontWeight: 700,
+                                color:      '#f1f5f9',
+                                margin:     '0 0 4px'
+                            }}>
+                                Recent Lane Comparison
+                            </h3>
+                            <p style={{ fontSize: '12px', color: '#475569', margin: '0 0 20px' }}>
+                                Last 10 readings — vehicles per lane
+                            </p>
+
+                            {recentData.length > 0 ? (
+                                <ResponsiveContainer width="100%" height={280}>
+                                    <BarChart
+                                        data={recentData}
+                                        margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+                                        barGap={4}
+                                    >
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#1a2535" vertical={false} />
+                                        <XAxis
+                                            dataKey="time"
+                                            tick={{ fill: '#475569', fontSize: 11 }}
+                                            axisLine={{ stroke: '#1a2535' }}
+                                            tickLine={false}
+                                            interval="preserveStartEnd"
+                                        />
+                                        <YAxis
+                                            tick={{ fill: '#475569', fontSize: 11 }}
+                                            axisLine={false}
+                                            tickLine={false}
+                                            allowDecimals={false}
+                                        />
+                                        <Tooltip content={<CustomTooltip />} />
+                                        <Legend wrapperStyle={{ color: '#94a3b8', fontSize: '13px', paddingTop: '12px' }} />
+                                        <Bar dataKey="Lane1" name="Lane 1" fill="#00e5ff" radius={[4, 4, 0, 0]} maxBarSize={32} />
+                                        <Bar dataKey="Lane2" name="Lane 2" fill="#00ff88" radius={[4, 4, 0, 0]} maxBarSize={32} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div style={{
+                                    display:        'flex',
+                                    flexDirection:  'column',
+                                    alignItems:     'center',
+                                    justifyContent: 'center',
+                                    height:         '280px',
+                                    color:          '#334155'
+                                }}>
+                                    <div style={{ fontSize:'40px', marginBottom:'12px' }}>📈</div>
+                                    <p style={{
+                                        margin:     0,
+                                        fontSize:   '15px',
+                                        color:      '#475569',
+                                        fontWeight: 600
+                                    }}>
+                                        No comparison data yet
+                                    </p>
+                                    <p style={{
+                                        margin:    '6px 0 0',
+                                        fontSize:  '12px',
+                                        color:     '#334155'
+                                    }}>
+                                        Start detection to see lane comparison
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })()}
             </div>
         </div>
     );

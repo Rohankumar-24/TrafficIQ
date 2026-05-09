@@ -1,4 +1,5 @@
 import React from 'react';
+import { useCountdown } from '../hooks/useCountdown';
 
 /* ─── helpers ──────────────────────────────────────────────────────────── */
 
@@ -59,6 +60,11 @@ const StatCard = ({
     const signal = emergency ? 'emergency' : normalizeSignal(rawSignal);
     const activeSignal = emergency ? 'green' : normalizeSignal(rawSignal);
 
+    /* Live countdown */
+    const countdown = useCountdown(duration, activeSignal);
+    const isUrgent   = countdown > 0 && countdown <= 5;
+    const isCritical = countdown > 0 && countdown <= 3;
+
     /* Header badge */
     const headerBadge = emergency
         ? { label: '🚨 EMERGENCY', bg: 'rgba(255,107,53,0.15)', border: '#ff6b35', color: '#ff6b35' }
@@ -72,8 +78,13 @@ const StatCard = ({
     const typesSource = Object.keys(types).length > 0 ? types : breakdown;
     const typeEntries = Object.entries(typesSource).filter(([, v]) => v > 0);
 
-    /* Signal time text colour */
-    const durationColor = activeSignal === 'green' ? '#00ff88' : activeSignal === 'yellow' ? '#ffd700' : '#ff4757';
+    /* Signal time text colour (with urgency override) */
+    const baseSignalColor = activeSignal === 'green' ? '#00ff88' : activeSignal === 'yellow' ? '#ffd700' : '#ff4757';
+    const durationColor = countdown === 0
+        ? '#475569'
+        : isCritical ? '#ff4757'
+        : isUrgent   ? '#ff6b35'
+        : baseSignalColor;
 
     /* Panel border / glow */
     const panelStyle = {
@@ -86,19 +97,29 @@ const StatCard = ({
         boxShadow:    emergency ? '0 0 20px rgba(255,107,53,0.1)' : 'none',
     };
 
-    /* Signal pills */
+    /* Signal pills — active pill shows live countdown with urgency colours */
     const signalPills = ['green', 'yellow', 'red'].map(s => {
         const isActive = s === activeSignal;
         const cfg = SIGNAL_CONFIG[s];
+        const pillColor = isActive
+            ? (isCritical ? '#ff4757' : isUrgent ? '#ff6b35' : cfg.color)
+            : PILL_INACTIVE.color;
+        const pillBorder = isActive
+            ? (isCritical ? '#ff4757' : isUrgent ? '#ff6b35' : cfg.border)
+            : PILL_INACTIVE.border;
+        const pillBg = isActive
+            ? (isCritical ? 'rgba(255,71,87,0.15)' : isUrgent ? 'rgba(255,107,53,0.12)' : cfg.bg)
+            : PILL_INACTIVE.bg;
         return {
             key:    s,
             label:  s === 'green' ? '🟢' : s === 'yellow' ? '🟡' : '🔴',
             name:   s.charAt(0).toUpperCase() + s.slice(1),
-            value:  isActive ? duration : 0,
+            value:  isActive ? countdown : 0,
             active: isActive,
-            bg:     isActive ? cfg.bg     : PILL_INACTIVE.bg,
-            border: isActive ? cfg.border : PILL_INACTIVE.border,
-            color:  isActive ? cfg.color  : PILL_INACTIVE.color,
+            bg:     pillBg,
+            border: pillBorder,
+            color:  pillColor,
+            blink:  isActive && isCritical,
         };
     });
 
@@ -191,6 +212,7 @@ const StatCard = ({
                             fontWeight:   600,
                             transition:   'all 0.3s ease',
                             whiteSpace:   'nowrap',
+                            animation:    pill.blink ? 'countdown-blink 0.5s step-start infinite' : 'none',
                         }}
                     >
                         {pill.label} {pill.name}: {pill.value}s
@@ -238,8 +260,14 @@ const StatCard = ({
             {/* Row: Signal time — no bottom border */}
             <div style={{ ...rowStyle, borderBottom: 'none' }}>
                 <span style={keyStyle}>SIGNAL TIME</span>
-                <span style={{ color: durationColor, fontWeight: 500, fontSize: '13px', transition: 'color 0.3s ease' }}>
-                    {duration} seconds
+                <span style={{
+                    color:      durationColor,
+                    fontWeight: 600,
+                    fontSize:   '13px',
+                    transition: 'color 0.3s ease',
+                    animation:  isCritical ? 'countdown-blink 0.5s step-start infinite' : 'none',
+                }}>
+                    {countdown} seconds remaining
                 </span>
             </div>
         </div>
@@ -290,6 +318,7 @@ if (typeof document !== 'undefined' && !document.getElementById('statcard-keyfra
     style.textContent = `
         @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&display=swap');
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes countdown-blink { 50% { opacity: 0; } }
     `;
     document.head.appendChild(style);
 }

@@ -273,7 +273,7 @@ export const TrafficProvider = ({ children }) => {
             } catch(err) {
                 console.error("Frame Poll Error:", err);
             }
-        }, 500);
+        }, 100);
     };
 
     useEffect(() => {
