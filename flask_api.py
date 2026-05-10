@@ -383,9 +383,12 @@ def api_analytics():
     all_types = {}
 
     for log in session_logs:
-        c = log.get("lane1_congestion", "Low")
-        if c in cong_dist:
-            cong_dist[c] += 1
+        c1 = log.get("lane1_congestion", "Low")
+        c2 = log.get("lane2_congestion", "Low")
+        if c1 in cong_dist:
+            cong_dist[c1] += 1
+        if c2 in cong_dist:
+            cong_dist[c2] += 1
 
     # Get vehicle types from current state
     for k, v in state["lane1"].get("types", {}).items():

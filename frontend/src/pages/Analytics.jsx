@@ -11,36 +11,17 @@ const Analytics = () => {
 
     const data = analyticsData;
 
-    // ── Flask analytics state (timeline) — used by bar chart ──────────────────
-    const [analyticsFlask, setAnalyticsFlask] = useState({ timeline: [] });
-    // ── Congestion Distribution from Flask /analytics ─────────────────────────
-    const [congDist, setCongDist] = useState({ Low: 0, Medium: 0, High: 0 });
+    // ── Derive Congestion Distribution directly from live context data ──────
+    const congDist = {
+        Low: data.congestionData?.find(c => c.name === 'Low')?.value || 0,
+        Medium: data.congestionData?.find(c => c.name === 'Medium')?.value || 0,
+        High: data.congestionData?.find(c => c.name === 'High')?.value || 0
+    };
 
-    useEffect(() => {
-        const fetchAnalytics = async () => {
-            try {
-                const res = await axios.get('/flask-api/analytics');
-                if (res.data?.congestion_dist) {
-                    setCongDist(prev => ({ ...prev, ...res.data.congestion_dist }));
-                }
-                if (res.data) setAnalyticsFlask(res.data);
-            } catch (err) {
-                // Flask may not be running; silently ignore
-            }
-        };
-        fetchAnalytics();
-        // Poll every 3 s while running
-        const id = isRunning ? setInterval(fetchAnalytics, 3000) : null;
-        return () => { if (id) clearInterval(id); };
-    }, [isRunning]);
+    const total = congDist.Low + congDist.Medium + congDist.High;
 
-    // Congestion distribution levels
-    const total = (congDist.Low || 0) + (congDist.Medium || 0) + (congDist.High || 0);
-
-    const hasData = (
-        (analyticsFlask?.timeline?.length > 0) &&
-        (total > 0)
-    );
+    // If we have timeSeriesData, we have data.
+    const hasData = data?.timeSeriesData?.length > 0;
 
     const levels = [
         {
@@ -252,15 +233,15 @@ const Analytics = () => {
                     )}
                 </div>
 
-                {/* Bar Chart — Recent Lane Comparison (from Flask timeline) */}
+                {/* Bar Chart — Recent Lane Comparison (from live context) */}
                 {(() => {
                     const recentData = hasData
-                        ? (analyticsFlask.timeline || [])
+                        ? (data.timeSeriesData || [])
                             .slice(-10)
                             .map(item => ({
-                                time:  item.timestamp,
-                                Lane1: item.lane1_count || 0,
-                                Lane2: item.lane2_count || 0
+                                time:  item.time,
+                                Lane1: item.lane1 || 0,
+                                Lane2: item.lane2 || 0
                             }))
                         : [];
 

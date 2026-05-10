@@ -45,6 +45,7 @@ export const TrafficProvider = ({ children }) => {
     const startSystem = async (video1Path, video2Path, hour) => {
         setIsUploading(true);
         setBackendError(null);
+        setAnalyticsData({ timeSeriesData: [], congestionData: [] });
 
         try {
             const isCurrentlyRunning = await fetchStatus();
@@ -225,11 +226,18 @@ export const TrafficProvider = ({ children }) => {
                     const c1 = lane1?.congestion || 'Low';
                     const c2 = lane2?.congestion || 'Low';
                     
-                    const newCongestion = [
-                        { name: 'Low', value: (c1==='Low'?1:0) + (c2==='Low'?1:0) + 1 },
-                        { name: 'Medium', value: (c1==='Medium'?1:0) + (c2==='Medium'?1:0) + 1 },
-                        { name: 'High', value: (c1==='High'?1:0) + (c2==='High'?1:0) + 1 }
+                    const prevCong = prev.congestionData?.length === 3 ? prev.congestionData : [
+                        { name: 'Low', value: 0 },
+                        { name: 'Medium', value: 0 },
+                        { name: 'High', value: 0 }
                     ];
+
+                    const newCongestion = prevCong.map(c => {
+                        let add = 0;
+                        if (c1 === c.name || (c1 === 'EMERGENCY' && c.name === 'High')) add++;
+                        if (c2 === c.name || (c2 === 'EMERGENCY' && c.name === 'High')) add++;
+                        return { ...c, value: c.value + add };
+                    });
 
                     return { timeSeriesData: newSeries, congestionData: newCongestion };
                 });
